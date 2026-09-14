@@ -1,0 +1,15 @@
+{
+  "//": "TEMPLATE — LiveKit OUTBOUND SIP trunk. Owner: Baradwaj.",
+  "//create": "lk sip outbound create scripts/outbound_trunk.json",
+  "//name": "Human-readable label.",
+  "//address": "Your Twilio termination SIP URI (e.g. <trunk>.pstn.twilio.com).",
+  "//numbers": "The caller ID(s) to present, E.164. Replace the placeholder.",
+  "//auth": "Twilio trunk credentials (set via Twilio console + here or as secrets).",
+  "trunk": {
+    "name": "soliant-outbound",
+    "address": "REPLACE.pstn.twilio.com",
+    "numbers": ["+10000000000"],
+    "auth_username": "REPLACE",
+    "auth_password": "REPLACE"
+  }
+}

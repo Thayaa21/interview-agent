@@ -1,0 +1,31 @@
+# Role: Staff Pharmacist (PharmD)  — DEMO ROLE 1
+# Company: Soliant (healthcare staffing).
+# TEMPLATE / skeleton content. Owner of final question content: Rishi + team.
+role:
+  id: staff_pharmacist
+  title: "Staff Pharmacist"
+  description: >
+    Licensed Staff Pharmacist (PharmD): reviews/verifies medication orders,
+    dispenses prescriptions, counsels patients, checks interactions, supervises
+    technicians, and maintains compliance in a hospital or retail setting.
+  requirements:
+    - "Doctor of Pharmacy (PharmD) degree"
+    - "Active state pharmacy license"
+
+# Role-specific questions (asked in addition to shared behavioral.yaml).
+# TODO: refine wording / add more as needed.
+questions:
+  - id: rx_1
+    category: background
+    text: "Can you walk me through your pharmacy background and your current licensure status?"
+    probe_hint: "Confirm PharmD + active license and states licensed in."
+
+  - id: rx_2
+    category: technical
+    text: "How do you verify a prescription and check for drug interactions before dispensing?"
+    probe_hint: "Look for a concrete verification workflow."
+
+  - id: rx_3
+    category: technical
+    text: "Tell me about a time you caught a medication error. What did you do?"
+    probe_hint: "Probe for the specific catch, action, and outcome."

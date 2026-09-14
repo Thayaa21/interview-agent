@@ -1,0 +1,16 @@
+# --- LiveKit Agents core + telephony + SIP API ---
+# NOTE (Rishi): these are current 1.x-line pins. After creating a venv and
+# running `pip install -r requirements.txt`, verify the exact plugin/event/method
+# names used in src/agent.py and src/dispatcher.py against the installed version.
+livekit-agents[deepgram,cartesia,anthropic,silero,turn-detector]~=1.0
+livekit-api~=1.0          # server API: create rooms + outbound SIP participants
+
+# --- Direct Anthropic SDK (used by reasoner.py for the follow-up decision) ---
+anthropic>=0.39.0
+
+# --- Config / data ---
+python-dotenv>=1.0.1
+PyYAML>=6.0.2
+
+# --- Tests ---
+pytest>=8.0.0

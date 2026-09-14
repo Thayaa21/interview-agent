@@ -1,0 +1,31 @@
+# Role: Registered Nurse - Oncology (RN)  — DEMO ROLE 2
+# Company: Soliant (healthcare staffing).
+# TEMPLATE / skeleton content. Owner of final question content: Rishi + team.
+role:
+  id: oncology_rn
+  title: "Registered Nurse - Oncology"
+  description: >
+    Oncology RN: direct patient care on an oncology/infusion unit, safe
+    chemotherapy administration, monitoring for adverse reactions, patient/family
+    education, and collaboration with the care team.
+  requirements:
+    - "Active RN license"
+    - "Oncology or infusion experience preferred"
+
+# Role-specific questions (asked in addition to shared behavioral.yaml).
+# TODO: refine wording / add more as needed.
+questions:
+  - id: rn_1
+    category: background
+    text: "Tell me about your nursing background and your experience in oncology or infusion settings."
+    probe_hint: "Confirm active RN license + type/length of oncology experience."
+
+  - id: rn_2
+    category: technical
+    text: "Walk me through how you safely prepare for and administer chemotherapy."
+    probe_hint: "Look for safety checks, PPE, verification, monitoring."
+
+  - id: rn_3
+    category: technical
+    text: "How do you recognize and respond to an adverse reaction during an infusion?"
+    probe_hint: "Probe for specific signs and escalation steps."

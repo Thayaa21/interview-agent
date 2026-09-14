@@ -1,0 +1,17 @@
+# Shared behavioral questions asked to EVERY candidate regardless of role.
+# These are merged with each role's role-specific questions by the loader.
+behavioral:
+  - id: beh_1
+    category: behavioral
+    text: "Tell me about a time you had to handle a high-pressure situation at work. What did you do?"
+    probe_hint: "Look for the specific situation, their actions, and the outcome."
+
+  - id: beh_2
+    category: behavioral
+    text: "Describe a time you disagreed with a colleague or supervisor. How did you resolve it?"
+    probe_hint: "Probe for how they communicated and what they learned."
+
+  - id: beh_3
+    category: behavioral
+    text: "Why are you interested in this role, and what are you looking for in your next position?"
+    probe_hint: "Look for motivation and fit; probe vague or generic answers."
