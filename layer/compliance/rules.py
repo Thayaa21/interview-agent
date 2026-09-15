@@ -1,0 +1,99 @@
+"""Rulebook loader.
+
+Parses rulebook.yaml into a typed Rulebook object. Rules are data; the
+guardrails engine (guardrails.py) enforces them. Keeping this separate means
+non-engineers can tune scope, banned topics, budgets, and messages without
+touching enforcement code.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from typing import List
+
+import yaml
+
+_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rulebook.yaml")
+
+
+class RulebookError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class OutputLimits:
+    followup_max_chars: int = 240
+    followup_must_end_with_question_mark: bool = True
+    banned_output_substrings: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Budgets:
+    max_followups_per_question: int = 2
+    max_total_turns: int = 60
+    max_call_seconds: int = 900
+    max_offtopic_before_end: int = 3
+
+
+@dataclass(frozen=True)
+class Messages:
+    redirect: str = ""
+    redirect_final: str = ""
+    blocked_injection: str = ""
+    end_offtopic: str = ""
+    output_blocked_fallback: str = ""
+
+
+@dataclass(frozen=True)
+class Rulebook:
+    purpose: str
+    allowed_intents: List[str]
+    off_topic_signals: List[str]
+    injection_signals: List[str]
+    allowed_output_kinds: List[str]
+    output_limits: OutputLimits
+    budgets: Budgets
+    messages: Messages
+
+
+def load_rulebook(path: str | None = None) -> Rulebook:
+    path = path or _DEFAULT_PATH
+    if not os.path.exists(path):
+        raise RulebookError(f"Rulebook not found at {path!r}.")
+    with open(path, "r", encoding="utf-8") as fh:
+        try:
+            data = yaml.safe_load(fh) or {}
+        except yaml.YAMLError as exc:
+            raise RulebookError(f"Could not parse rulebook {path!r}: {exc}") from exc
+
+    scope = data.get("scope", {}) or {}
+    ol = data.get("output_limits", {}) or {}
+    bg = data.get("budgets", {}) or {}
+    ms = data.get("messages", {}) or {}
+
+    return Rulebook(
+        purpose=(scope.get("purpose") or "").strip(),
+        allowed_intents=list(scope.get("allowed_intents") or []),
+        off_topic_signals=[s.lower() for s in (scope.get("off_topic_signals") or [])],
+        injection_signals=[s.lower() for s in (data.get("injection_signals") or [])],
+        allowed_output_kinds=list(data.get("allowed_output_kinds") or []),
+        output_limits=OutputLimits(
+            followup_max_chars=int(ol.get("followup_max_chars", 240)),
+            followup_must_end_with_question_mark=bool(ol.get("followup_must_end_with_question_mark", True)),
+            banned_output_substrings=[s.lower() for s in (ol.get("banned_output_substrings") or [])],
+        ),
+        budgets=Budgets(
+            max_followups_per_question=int(bg.get("max_followups_per_question", 2)),
+            max_total_turns=int(bg.get("max_total_turns", 60)),
+            max_call_seconds=int(bg.get("max_call_seconds", 900)),
+            max_offtopic_before_end=int(bg.get("max_offtopic_before_end", 3)),
+        ),
+        messages=Messages(
+            redirect=ms.get("redirect", ""),
+            redirect_final=ms.get("redirect_final", ""),
+            blocked_injection=ms.get("blocked_injection", ""),
+            end_offtopic=ms.get("end_offtopic", ""),
+            output_blocked_fallback=ms.get("output_blocked_fallback", ""),
+        ),
+    )

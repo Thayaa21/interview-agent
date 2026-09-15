@@ -1,0 +1,89 @@
+# Behavioral criteria mapped from each role's JD.
+# For every question the agent asks, we define the behavioral competencies we're
+# screening for. The interpreter maps a candidate's answer to these criteria
+# (met / partial / not_met / not_addressed) with evidence.
+#
+# Structure:
+#   <role_id>:
+#     questions:
+#       <question_id>:
+#         competency: <short label>
+#         criteria:
+#           - id: <criterion_id>
+#             label: <what good looks like>
+#             signals: [keywords/phrases that hint the criterion is addressed]
+#
+# `signals` are hints for the fallback keyword interpreter; the LLM interpreter
+# uses `label` directly. question_ids match roles/<role>.yaml + behavioral.yaml.
+
+oncology_rn:
+  questions:
+    beh_1:
+      competency: "Composure under pressure"
+      criteria:
+        - id: rn_pressure_situation
+          label: "Describes a specific high-pressure clinical situation, not a generic one"
+          signals: [code, emergency, rapid, deteriorat, critical, shift, patient]
+        - id: rn_pressure_action
+          label: "Explains the concrete actions they personally took"
+          signals: [i did, i called, i assessed, i prioritized, i escalated]
+        - id: rn_pressure_outcome
+          label: "States the outcome and any learning"
+          signals: [outcome, result, stabilized, learned, next time]
+    beh_2:
+      competency: "Conflict resolution & communication"
+      criteria:
+        - id: rn_conflict_context
+          label: "Describes a real disagreement with a colleague/supervisor"
+          signals: [disagree, colleague, doctor, charge nurse, supervisor]
+        - id: rn_conflict_approach
+          label: "Shows a constructive, respectful approach to resolving it"
+          signals: [listened, discussed, compromise, explained, patient safety]
+        - id: rn_conflict_learning
+          label: "Reflects on the resolution and what they took from it"
+          signals: [resolved, learned, relationship, better]
+    beh_3:
+      competency: "Motivation & role fit"
+      criteria:
+        - id: rn_motivation_specific
+          label: "Gives specific, genuine reasons for interest in oncology nursing"
+          signals: [oncology, patients, care, passion, meaningful, mission]
+        - id: rn_motivation_goals
+          label: "Connects the role to their own goals"
+          signals: [grow, develop, goal, looking for, next step]
+
+staff_pharmacist:
+  questions:
+    beh_1:
+      competency: "Composure under pressure"
+      criteria:
+        - id: rx_pressure_situation
+          label: "Describes a specific high-pressure pharmacy situation"
+          signals: [busy, backlog, urgent, error, shortage, volume]
+        - id: rx_pressure_action
+          label: "Explains the concrete actions they personally took"
+          signals: [i verified, i prioritized, i contacted, i double-checked]
+        - id: rx_pressure_outcome
+          label: "States the outcome and any learning"
+          signals: [outcome, resolved, safe, learned, prevented]
+    beh_2:
+      competency: "Conflict resolution & communication"
+      criteria:
+        - id: rx_conflict_context
+          label: "Describes a real disagreement with a colleague/prescriber"
+          signals: [disagree, prescriber, physician, technician, colleague]
+        - id: rx_conflict_approach
+          label: "Shows a professional, patient-safety-first approach"
+          signals: [clarified, called, explained, guideline, safety, respect]
+        - id: rx_conflict_learning
+          label: "Reflects on the resolution and what they learned"
+          signals: [resolved, learned, agreed, better]
+    beh_3:
+      competency: "Motivation & role fit"
+      criteria:
+        - id: rx_motivation_specific
+          label: "Gives specific reasons for interest in this pharmacist role"
+          signals: [pharmacy, patients, counsel, clinical, team]
+        - id: rx_motivation_goals
+          label: "Connects the role to their own goals"
+          signals: [grow, develop, goal, looking for, learn]

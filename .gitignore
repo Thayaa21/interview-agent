@@ -21,3 +21,7 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Frontend (Node)
+node_modules/
+dist/
