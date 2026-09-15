@@ -61,7 +61,7 @@ Soliant (healthcare/education staffing).
   **free trial** this is free within the included minutes.
 - **Deepgram** — turns the candidate's *speech into text* (so the AI understands).
 - **Cartesia** — turns the AI's *text into speech* (so the candidate hears a voice).
-- **Anthropic (Claude)** — the AI that decides follow-up questions.
+- **OpenAI (GPT-4o)** — the AI that decides follow-up questions.
 
 Each service gives us an **API key** — a secret password our software uses.
 Your job includes collecting these keys and putting them in one place (`.env`)
@@ -88,7 +88,7 @@ Steps marked ⚠️ need a console login. None of this requires paying.
 ### 1. ⚠️ Create the accounts and collect keys (all free tiers)
 - LiveKit Cloud → project URL + an **API key** and **API secret**.
 - Deepgram → one API key (free credit on signup).
-- Anthropic → one API key.
+- OpenAI → one API key (GPT-4o). We already have this one.
 - Cartesia → one API key (free tier).
 
 ### 2. Fill in the `.env` file

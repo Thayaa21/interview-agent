@@ -67,8 +67,9 @@ mapping, guardrail feed, and overall score update live over the WebSocket.
    competencies we're screening for (`analysis/criteria.yaml`, mapped from the
    JD). The interpreter maps each answer to those criteria (met / partial /
    not_met / not_addressed) with evidence and a score. Runs **post-answer** in
-   real time. Heuristic backend by default; Claude backend when a key is present
-   (auto-fallback on error).
+   real time. Heuristic backend by default; an **OpenAI GPT-4o** backend is
+   stubbed in as a placeholder (call not wired yet — falls back to heuristic
+   until enabled, so the demo works without it).
 4. **Robust turn assembly.** `turn_assembler.py` stitches fragmented,
    multi-sentence answers into one, using an end-of-turn signal or a debounce
    window so a mid-answer pause isn't mistaken for "done."

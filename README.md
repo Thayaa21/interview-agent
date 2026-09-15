@@ -33,7 +33,7 @@ Demo scope: **2 roles** — `staff_pharmacist` and `oncology_rn`.
 - LiveKit Agents (Python)
 - Twilio trial number + Voice webhook / Media Streams (inbound; free)
 - Deepgram Nova-3 (STT), Cartesia Sonic (TTS)
-- Claude / Anthropic (follow-up decision + answer interpretation)
+- OpenAI GPT-4o (follow-up decision + answer interpretation)
 - LiveKit VAD + turn detection
 
 ## Layout

@@ -4,5 +4,6 @@ uvicorn[standard]>=0.29.0
 pydantic>=2.6.0
 PyYAML>=6.0.2
 
-# Optional: enables the Claude-based interpreter (falls back to heuristic if absent).
-anthropic>=0.39.0
+# Optional: for the OpenAI GPT-4o interpreter backend (once wired). The layer
+# runs on the heuristic interpreter without it.
+openai>=1.40.0

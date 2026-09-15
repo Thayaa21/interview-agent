@@ -63,8 +63,8 @@ Plain-language definitions of the terms used in this project. Grouped by area.
   Nova-3, streaming.
 - **TTS (Text-to-Speech)** — turns the agent's text into speech. Cartesia Sonic,
   streaming.
-- **LLM** — the reasoning model. Claude (Anthropic); used for the follow-up
-  decision.
+- **LLM** — the reasoning model. OpenAI GPT-4o (we have an OpenAI key); used for
+  the follow-up decision and answer interpretation.
 - **VAD (Voice Activity Detection)** — detects whether someone is speaking.
   Silero VAD.
 - **Turn detection / end-of-turn** — deciding when the candidate has *finished*
@@ -83,7 +83,7 @@ Plain-language definitions of the terms used in this project. Grouped by area.
   role (`roles/behavioral.yaml`).
 - **Interview state machine (`InterviewController`)** — the code that owns
   progression: greet → ask preset questions → capped follow-ups → close.
-- **Reasoner** — the wrapper around the Claude call that returns a follow-up
+- **Reasoner** — the wrapper around the GPT-4o call that returns a follow-up
   `Decision`; only advises. Fails safe to "advance".
 - **Follow-up cap (`MAX_FOLLOWUPS`)** — hard limit (2) on follow-ups per
   question, enforced in code.

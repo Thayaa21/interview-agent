@@ -8,8 +8,9 @@ evidence note. It then rolls those up into a per-answer score.
 Two backends behind one interface (Interpreter protocol):
   * HeuristicInterpreter — deterministic keyword/structure scoring. No API keys.
     Powers the demo out of the box and is fully testable.
-  * ClaudeInterpreter    — LLM-based semantic mapping via Anthropic. Preferred
-    when a key is available; falls back to heuristic on any error.
+  * OpenAIInterpreter    — LLM-based semantic mapping via OpenAI GPT-4o.
+    PLACEHOLDER for now (call not wired yet); falls back to heuristic until
+    enabled, so the demo works without it.
 
 Runs POST-ANSWER (per user's choice): called once per completed answer, in real
 time, so results stream to the dashboard as the interview proceeds.
@@ -102,7 +103,11 @@ class HeuristicInterpreter:
         return f"{competency}: {met}/{len(results)} criteria met (score {score:.0%})."
 
 
-# --- Claude (semantic) ------------------------------------------------------
+# --- OpenAI GPT-4o (semantic) ----------------------------------------------
+# LLM backend is OpenAI GPT-4o (we have an OpenAI key). The actual API call is
+# left as a PLACEHOLDER for now — until it's wired, this backend transparently
+# uses the HeuristicInterpreter, so the dashboard/demo keeps working with no key.
+# The prompt + JSON parsing (_parse) are ready for when the call is added.
 _SYSTEM = (
     "You evaluate a candidate's spoken interview answer against a set of "
     "behavioral criteria for a healthcare staffing role. For each criterion, "
@@ -126,25 +131,40 @@ def _build_prompt(question_text: str, answer_text: str, qc: QuestionCriteria) ->
     )
 
 
-class ClaudeInterpreter:
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5", max_tokens: int = 600):
-        from anthropic import Anthropic
+class OpenAIInterpreter:
+    """LLM interpreter backed by OpenAI GPT-4o.
 
-        self._client = Anthropic(api_key=api_key)
+    PLACEHOLDER: the API call is not wired yet (will be added later). Until then
+    it falls back to the heuristic interpreter, so nothing breaks. To enable it,
+    implement `_call_llm()` with the OpenAI Chat Completions API (model gpt-4o,
+    system=_SYSTEM, user=_build_prompt(...), JSON response) and return the raw
+    text; `_parse()` below already turns that into an AnswerAnalysis.
+    """
+
+    def __init__(self, api_key: str = "", model: str = "gpt-4o", max_tokens: int = 600):
+        self._api_key = api_key
         self._model = model
         self._max_tokens = max_tokens
         self._fallback = HeuristicInterpreter()
 
+    def _call_llm(self, question_text: str, answer_text: str, qc: QuestionCriteria) -> str:
+        # TODO(later): wire the OpenAI GPT-4o call and return the raw JSON text.
+        #   from openai import OpenAI
+        #   client = OpenAI(api_key=self._api_key)
+        #   resp = client.chat.completions.create(
+        #       model=self._model, max_tokens=self._max_tokens,
+        #       response_format={"type": "json_object"},
+        #       messages=[{"role": "system", "content": _SYSTEM},
+        #                 {"role": "user", "content": _build_prompt(question_text, answer_text, qc)}])
+        #   return resp.choices[0].message.content
+        raise NotImplementedError("OpenAI GPT-4o call not wired yet")
+
     def interpret(self, question_id, question_text, answer_text, qc: QuestionCriteria) -> AnswerAnalysis:
         try:
-            resp = self._client.messages.create(
-                model=self._model, max_tokens=self._max_tokens, system=_SYSTEM,
-                messages=[{"role": "user", "content": _build_prompt(question_text, answer_text, qc)}],
-            )
-            text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+            text = self._call_llm(question_text, answer_text, qc)
             return self._parse(question_id, question_text, answer_text, qc, text)
         except Exception as exc:  # noqa: BLE001 - never break the interview
-            logger.warning("ClaudeInterpreter failed (%s); using heuristic.", exc)
+            logger.warning("OpenAIInterpreter unavailable (%s); using heuristic.", exc)
             return self._fallback.interpret(question_id, question_text, answer_text, qc)
 
     def _parse(self, question_id, question_text, answer_text, qc: QuestionCriteria, raw: str) -> AnswerAnalysis:

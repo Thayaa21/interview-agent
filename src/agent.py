@@ -8,14 +8,14 @@ When the candidate answers, the agent should:
   * read candidate context from job metadata,
   * load the role's question bank,
   * greet by name, ask preset questions one at a time (role + behavioral),
-  * ask up to MAX_FOLLOWUPS follow-ups per question (Claude decides, code caps),
+  * ask up to MAX_FOLLOWUPS follow-ups per question (GPT-4o decides, code caps),
   * close + hang up after the last question,
   * log every turn.
 
 Intended usage once implemented:
     python -m src.agent dev
 
-TODO(Rishi): build the AgentSession (Deepgram STT, Anthropic LLM, Cartesia TTS,
+TODO(Rishi): build the AgentSession (Deepgram STT, OpenAI GPT-4o LLM, Cartesia TTS,
              Silero VAD + LiveKit turn detection), read job metadata, drive the
              InterviewController on each final transcript, log turns, hang up on END.
 TODO(Baradhwaj): make sure the worker's agent_name matches the dispatch config
@@ -32,7 +32,7 @@ async def entrypoint(ctx) -> None:  # ctx: livekit.agents.JobContext
       1. load_settings(profile="runtime")  # fail fast on missing keys
       2. await ctx.connect()
       3. parse candidate context (name/role/phone) from ctx.job.metadata
-      4. load_role(role_id); build TranscriptLogger + ClaudeReasoner + InterviewController
+      4. load_role(role_id); build TranscriptLogger + OpenAIReasoner + InterviewController
       5. start AgentSession(stt, llm, tts, vad, turn_detection)
       6. on each FINAL user transcript: log it, controller.handle_answer(),
          speak the result, and disconnect on ActionKind.END

@@ -28,7 +28,7 @@ Call direction: **INBOUND first (free)**; outbound is a funded-later phase.
    ┌──────────── AgentSession pipeline ────────────┐
    │ caller audio → Deepgram STT → InterviewController    │
    │                                       │              │
-   │                          Claude (follow-up decision) │
+   │                          GPT-4o (follow-up decision) │
    │ next line → Cartesia TTS → caller                    │
    │ VAD + turn detector gate end-of-turn                 │
    │ TranscriptLogger records every turn                  │
@@ -40,7 +40,7 @@ Call direction: **INBOUND first (free)**; outbound is a funded-later phase.
 
 Key idea: for the free demo the **candidate initiates** the call; Twilio's
 webhook + Media Streams bridge it into LiveKit via the Twilio Connector (no SIP
-trunk). The `InterviewController` owns flow in code; Claude only advises on
+trunk). The `InterviewController` owns flow in code; GPT-4o only advises on
 follow-ups.
 
 ## 2. Inbound call lifecycle (free path)
@@ -65,8 +65,8 @@ them. Requires paid trunking; deferred until funded.
   behavioral questions from `roles/`.
 - **interview.py** — `InterviewController` state machine (greeting → questions +
   capped follow-ups → closing).
-- **reasoner.py** — `ClaudeReasoner` bounded "follow up or advance" decision;
-  fails safe to advance.
+- **reasoner.py** — `OpenAIReasoner` (GPT-4o) bounded "follow up or advance"
+  decision; fails safe to advance.
 - **filters.py** — single input-filter seam (stub: allow all).
 - **transcript.py** — sqlite / jsonl turn logger keyed by room name.
 - **agent.py** — LiveKit worker entrypoint; wires the realtime pipeline and
@@ -86,7 +86,7 @@ live dashboard that consume this pipeline's events.
 
 ## 5. Design intent
 - **Code-driven loop, bounded LLM** — deterministic flow, guaranteed max-2
-  follow-ups; Claude only picks/wordsmiths follow-ups.
+  follow-ups; GPT-4o only picks/wordsmiths follow-ups.
 - **Per-call isolation** — one room + one controller + one transcript per call;
   room name is the transcript key.
 - **Single filter seam** — future screening drops in without rewiring.

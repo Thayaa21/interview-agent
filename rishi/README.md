@@ -55,11 +55,12 @@ Each item points to the file and the `TODO(Rishi)` inside it.
    through). This is the single seam where answer-screening could go later; keep
    the return type stable.
 
-5. **`src/reasoner.py` — `parse_decision()` + `ClaudeReasoner.decide()`**
-   `decide()` calls Claude (Anthropic Messages API) with the current question and
-   answer and expects a JSON decision (`follow_up` or `advance`, plus follow-up
-   wording). `parse_decision()` parses it defensively. **Fail safe:** on any API
-   or parse error, return an `advance` decision so a candidate is never stuck.
+5. **`src/reasoner.py` — `parse_decision()` + `OpenAIReasoner.decide()`**
+   `decide()` calls the LLM (**OpenAI GPT-4o** — we have an OpenAI key) with the
+   current question and answer and expects a JSON decision (`follow_up` or
+   `advance`, plus follow-up wording). `parse_decision()` parses it defensively.
+   **Fail safe:** on any API or parse error, return an `advance` decision so a
+   candidate is never stuck. (Provider is isolated to this module; swappable.)
 
 6. **`src/interview.py` — `InterviewController`**
    The heart of the flow. Implement `__init__`, `first_prompt`, `handle_answer`,
@@ -75,7 +76,7 @@ Each item points to the file and the `TODO(Rishi)` inside it.
 
 8. **`src/agent.py` — `entrypoint()` + worker registration**
    The per-call agent. Load the role, build the `AgentSession` (Deepgram STT,
-   Anthropic LLM, Cartesia TTS, Silero VAD + LiveKit turn detection), greet,
+   OpenAI GPT-4o LLM, Cartesia TTS, Silero VAD + LiveKit turn detection), greet,
    then on each final transcript drive the `InterviewController`, speak the
    result, log turns, and hang up on END. Register the worker with `agent_name`.
    (For inbound, candidate context can be minimal — no candidate sheet needed.)

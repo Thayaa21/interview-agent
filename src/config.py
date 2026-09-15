@@ -26,7 +26,7 @@ REQUIRED_RUNTIME_VARS: list[str] = [
     "LIVEKIT_API_KEY",
     "LIVEKIT_API_SECRET",
     "DEEPGRAM_API_KEY",
-    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
     "CARTESIA_API_KEY",
 ]
 
@@ -50,11 +50,11 @@ class Settings:
     outbound_caller_id: str = ""
     # Providers
     deepgram_api_key: str = ""
-    anthropic_api_key: str = ""
+    openai_api_key: str = ""
     cartesia_api_key: str = ""
     # App
     candidate_sheet: str = "candidates.csv"
-    interview_model: str = "claude-sonnet-4-5"
+    interview_model: str = "gpt-4o"
     stt_model: str = "nova-3"
     tts_model: str = "sonic-2"
     transcript_backend: str = "sqlite"

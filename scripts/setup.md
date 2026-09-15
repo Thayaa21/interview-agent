@@ -12,7 +12,7 @@ for the plain-language version.
 ## 1. ⚠️ Accounts & keys (free tiers)
 - LiveKit Cloud project → `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`.
 - Deepgram → `DEEPGRAM_API_KEY`.
-- Anthropic → `ANTHROPIC_API_KEY`.
+- OpenAI → `OPENAI_API_KEY` (GPT-4o).
 - Cartesia → `CARTESIA_API_KEY`.
 - Copy `.env.example` → `.env` and fill these in. Leave `SIP_OUTBOUND_TRUNK_ID`
   and `OUTBOUND_CALLER_ID` blank (outbound-only).
