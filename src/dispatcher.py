@@ -1,6 +1,7 @@
 """Outbound call dispatcher.  [SKELETON]
 
-Owner: Rishi (code) + Baradwaj (SIP trunk / caller id it depends on).
+Owner: Rishi (code) + Baradhwaj (SIP trunk / caller id it depends on).
+NOTE: FUNDED-LATER. Outbound is NOT part of the free inbound demo.
 
 Reads the candidate sheet and, for each candidate, places an outbound call by:
   1. dispatching the named agent into a fresh per-call room, then
@@ -16,8 +17,8 @@ Intended usage once implemented:
 
 TODO(Rishi):  implement _place_call() using livekit-api (agent_dispatch +
               create_sip_participant) and the run()/main() CLI.
-TODO(Baradwaj): provide SIP_OUTBOUND_TRUNK_ID + OUTBOUND_CALLER_ID via setup so
-                _place_call has a working trunk to dial through.
+TODO(Baradhwaj): provide SIP_OUTBOUND_TRUNK_ID + OUTBOUND_CALLER_ID via setup so
+                 _place_call has a working trunk to dial through.
 """
 
 from __future__ import annotations

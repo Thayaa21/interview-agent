@@ -1,13 +1,13 @@
 """Environment-based configuration.  [SKELETON]
 
-Owner: Baradwaj (owns env/secrets/setup), with Rishi consuming Settings in code.
+Owner: Baradhwaj (owns env/secrets/setup), with Rishi consuming Settings in code.
 
 Loads settings from a local `.env` and exposes a typed `Settings` object.
 Should validate that required variables are present and fail fast with a clear
 error naming any that are missing.
 
-TODO(Baradwaj): decide the final list of required vars and the validation
-                profiles (agent runtime vs. outbound dispatcher).
+TODO(Baradhwaj): decide the final list of required vars and the validation
+                 profiles (agent runtime vs. outbound dispatcher).
 TODO(Rishi):    implement load_settings() to read + validate + return Settings.
 """
 

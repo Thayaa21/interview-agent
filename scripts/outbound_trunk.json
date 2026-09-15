@@ -1,5 +1,5 @@
 {
-  "//": "TEMPLATE — LiveKit OUTBOUND SIP trunk. Owner: Baradwaj.",
+  "//": "TEMPLATE — LiveKit OUTBOUND SIP trunk (FUNDED-LATER, not used in the free inbound demo). Owner: Baradhwaj.",
   "//create": "lk sip outbound create scripts/outbound_trunk.json",
   "//name": "Human-readable label.",
   "//address": "Your Twilio termination SIP URI (e.g. <trunk>.pstn.twilio.com).",

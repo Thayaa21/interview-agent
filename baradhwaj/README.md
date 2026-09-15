@@ -4,153 +4,139 @@ You're coming at this from **product**, not deep engineering — so this guide
 explains not just *what* to do but *what each piece is* and *why it matters*.
 You don't write the app code (that's Rishi, in `../rishi/`). You set up the
 "outside world" the app depends on: the accounts, the secret keys, the phone
-line, and the list of people to call. Without your track, Rishi's code has
-nothing to run against.
+number, and the questions/candidate content.
 
-Think of it like this: Rishi builds the interviewer's brain and mouth.
-You give it a phone, a phone number, permission to use the AI services, and the
-list of candidates to call.
+Think of it like this: Rishi builds the interviewer's brain and mouth. You give
+it a phone number to receive calls on, permission to use the AI services, and
+the interview content.
 
 ---
 
-## The big picture (how a call actually happens)
+## IMPORTANT: we are doing FREE, INBOUND-only for now
 
-1. We keep a **candidate sheet** — a spreadsheet/CSV with each person's name,
-   the role they're interviewing for, and their phone number.
-2. Our software reads that sheet and, one by one, **places an outbound call** to
-   each candidate.
-3. When the candidate picks up, an **AI voice agent** greets them and asks a set
-   of preset questions for their role, listening and asking short follow-ups.
-4. Every question and answer is **saved to a transcript** for review.
+We are **not** doing outbound calling yet (us dialing candidates). Outbound
+requires Twilio's **Elastic SIP Trunk**, which is a paid/"advanced" product that
+forces a trial upgrade with a minimum top-up (~$20). We're skipping that.
 
-For step 2 and 3 to work, several external services have to be connected. That
-connection work is your track.
+Instead, the demo is **inbound**: the **candidate calls a Twilio trial number**,
+and the AI agent answers. This works on Twilio's **free trial** because it uses
+the **Voice webhook + Media Streams** path (not a SIP trunk). Twilio's trial
+gives free voice minutes (~75 min) — plenty for a demo.
 
-Demo scope: **2 roles only** — Staff Pharmacist and Oncology RN. Company context:
+> Outbound calling and the candidate sheet (`candidates.csv`) become a
+> **"funded later"** phase. For now, ignore them.
+
+---
+
+## The big picture (how a free inbound call works)
+
+1. A candidate dials our **Twilio trial phone number**.
+2. Twilio calls our **Voice webhook** (a small URL we control) and asks "what
+   should I do with this call?"
+3. Our webhook answers with **TwiML** (Twilio's instruction format) that says
+   "stream this call's audio to our server" using `<Connect><Stream>` — this is
+   **Media Streams**, a WebSocket audio feed. No SIP trunk needed.
+4. LiveKit's **Twilio Connector** receives that audio stream and drops the caller
+   into a **LiveKit room**.
+5. Our **AI agent** is already in that room: it greets the candidate, asks the
+   preset questions, listens, and responds. Every turn is logged.
+
+The only "extra" for the free path vs. a paid trunk: because Twilio needs to
+reach our webhook over the public internet, we run a small free tunnel
+(**ngrok**) during the demo that gives Twilio a public URL pointing at the local
+machine. Rishi handles the webhook code; you handle the Twilio number + keys.
+
+Demo scope: **2 roles** — Staff Pharmacist and Oncology RN. Company context:
 Soliant (healthcare/education staffing).
 
 ---
 
 ## The services involved, in plain language
 
-- **LiveKit** — the "meeting room" service. Each phone call happens inside a
-  virtual room. LiveKit is where the candidate's audio and the AI agent meet. We
-  use *LiveKit Cloud* (their hosted version) so nobody has to run servers.
-- **Twilio** — the phone company. It gives us a real phone number and the ability
-  to actually dial out over the normal phone network.
-- **SIP trunk** — the "pipe" that connects Twilio's phone network to our LiveKit
-  room. "Outbound" means it's set up for *us calling out* to candidates. You
-  don't need the deep technical detail; just know it's the plumbing between the
-  phone number and the software, and it has to be created once.
-- **Deepgram** — turns the candidate's *speech into text* (so the AI can
-  understand what they said).
-- **Cartesia** — turns the AI's *text into speech* (so the candidate hears a
-  natural voice).
-- **Anthropic (Claude)** — the AI that decides whether to ask a follow-up
-  question.
+- **LiveKit** — the "meeting room" service. Each call happens in a virtual room
+  where the candidate's audio and the AI agent meet. We use *LiveKit Cloud*
+  (hosted) so nobody runs servers.
+- **Twilio** — the phone company. It gives us a phone number and, via the
+  **Voice webhook + Media Streams**, streams the call audio to our app. On the
+  **free trial** this is free within the included minutes.
+- **Deepgram** — turns the candidate's *speech into text* (so the AI understands).
+- **Cartesia** — turns the AI's *text into speech* (so the candidate hears a voice).
+- **Anthropic (Claude)** — the AI that decides follow-up questions.
 
-Each of these services gives us an **API key** — basically a password that lets
-our software use that service. Your job includes collecting all these keys and
-putting them in one place (a `.env` file) safely.
+Each service gives us an **API key** — a secret password our software uses.
+Your job includes collecting these keys and putting them in one place (`.env`)
+safely.
 
 ---
 
 ## What "keys in a .env file" means (and why it matters)
 
-- An **API key** is a secret credential. If it leaks, someone else can run up
-  charges on our accounts. So keys must **never** be committed to the code
-  repository or shared in chat/email.
-- We store them in a file named **`.env`** (there's a template called
-  `.env.example` showing exactly which keys are needed). The `.env` file stays
-  only on the machine running the demo and is git-ignored (already configured).
-- Your deliverable here: a complete, filled-in `.env`, kept private.
+- An **API key** is a secret credential. If it leaks, someone can run up charges
+  on our accounts. So keys must **never** be committed to the repo or shared in
+  chat/email.
+- We keep them in a file named **`.env`** (there's a template, `.env.example`,
+  listing exactly which keys are needed). `.env` stays only on the demo machine
+  and is git-ignored already.
+- Your deliverable: a filled-in `.env`, kept private.
 
 ---
 
 ## Your checklist (do these in order)
 
-Steps marked ⚠️ require logging into a company/console and may involve billing.
-Take your time; ask Rishi if a value is unclear.
+Steps marked ⚠️ need a console login. None of this requires paying.
 
-### 1. ⚠️ Create the accounts and collect keys
-Sign up for (or get access to) each service and copy its key:
-- LiveKit Cloud → gives you a project URL and two values: an **API key** and an
-  **API secret**.
-- Deepgram → one API key.
+### 1. ⚠️ Create the accounts and collect keys (all free tiers)
+- LiveKit Cloud → project URL + an **API key** and **API secret**.
+- Deepgram → one API key (free credit on signup).
 - Anthropic → one API key.
-- Cartesia → one API key.
+- Cartesia → one API key (free tier).
 
 ### 2. Fill in the `.env` file
 - Copy the template: `cp .env.example .env`
-- Open `.env` and paste each value next to its name (e.g. `DEEPGRAM_API_KEY=...`).
-- Leave the app-setting lines (model names, etc.) at their defaults unless Rishi
-  asks to change them.
-- The file `.env.example` documents every field; you're just filling the blanks.
+- Paste each value next to its name (e.g. `DEEPGRAM_API_KEY=...`).
+- Leave the outbound-only fields (`SIP_OUTBOUND_TRUNK_ID`, `OUTBOUND_CALLER_ID`)
+  **blank for now** — they belong to the funded-later outbound phase.
 
-### 3. ⚠️ Get a phone number and phone connection from Twilio
-- In Twilio, buy a phone number that can make voice calls. This becomes our
-  **caller ID** — the number candidates see when we call them.
-- Set up an **Elastic SIP Trunk** in Twilio. During that setup Twilio gives you a
-  "termination" address and login credentials. Save these — they connect Twilio
-  to LiveKit in the next step.
-- Put the phone number in `.env` as `OUTBOUND_CALLER_ID` (and
-  `TWILIO_PHONE_NUMBER`).
+### 3. ⚠️ Twilio trial number (FREE — do NOT upgrade)
+- Sign up for a free Twilio trial. It comes with free voice minutes (~75) and a
+  trial number.
+- Buy/claim a **trial phone number** that can receive voice calls, using the
+  trial credit. Put it in `.env` as `TWILIO_PHONE_NUMBER`.
+- **Do not** click "Upgrade account" and **do not** create an Elastic SIP Trunk
+  — that's the paid path we're avoiding.
+- Note: on a trial, callers hear a short "trial account" message first, and
+  there can be verified-number restrictions. That's fine for the demo.
 
-### 4. Connect Twilio to LiveKit (the outbound trunk)
-- There's a template file `../scripts/outbound_trunk.json`. Fill in the Twilio
-  termination address, the phone number, and the credentials from step 3.
-- Create the trunk using the LiveKit command-line tool (`lk`):
-  `lk sip outbound create scripts/outbound_trunk.json`
-- This returns a **trunk id** that looks like `ST_...`. Put it in `.env` as
-  `SIP_OUTBOUND_TRUNK_ID`. This is the ID our software uses to place calls.
+### 4. Point the number's Voice webhook at our app (with Rishi)
+- In the number's config, there's a **"A Call Comes In"** Voice webhook URL.
+- Rishi will run the webhook + the ngrok tunnel and give you a public URL like
+  `https://xxxx.ngrok.io/incoming`. You paste that into the number's Voice
+  webhook field and save.
+- This is the one step you and Rishi do together.
 
-### 5. ⚠️ Install and log in to the LiveKit CLI (`lk`)
-- The `lk` tool is a small program that talks to LiveKit from the command line.
-  Install it and authenticate it to our LiveKit project (one-time). Rishi can
-  help if the install step is unfamiliar. You need this for step 4.
+### 5. Keep the demo content ready
+- **Question content** — `../roles/*.yaml` and `../roles/behavioral.yaml`. The
+  wording, tone, and what we screen for is a product call. Review/refine these.
+- (Candidate sheet `candidates.csv` is for the outbound phase — skip for now.)
 
-### 6. Keep the "agent name" consistent
-- Our software registers the AI agent under a name (default:
-  `soliant-interviewer`, set as `AGENT_NAME` in `.env`). The same name has to be
-  used when calls are dispatched. As long as you don't change `AGENT_NAME`, this
-  just works — only flag it if Rishi renames it.
-
-### 7. Maintain the candidate sheet
-- The file `../candidates.csv` is the list of people to call. It has exactly
-  three columns: **name**, **role**, **phone**.
-  - `name` — how the AI greets them (e.g. "Alex Taylor").
-  - `role` — must be one of the two demo roles **exactly**: `staff_pharmacist`
-    or `oncology_rn`. (These match the question sets in `../roles/`.)
-  - `phone` — must be in **E.164** format: a `+`, the country code, then the
-    number, no spaces or dashes. Example: `+14155550123`.
-- Replace the example rows with real candidates. A wrong role name or a badly
-  formatted phone number will be caught and rejected before any call is placed,
-  so it's safe to fix and re-run.
-
-### 8. Run the demo (with Rishi, once his code is ready)
-Three commands (Rishi will confirm when the code is done):
-- Start the AI agent so it's ready to answer calls:
-  `python -m src.agent dev`
-- Do a **dry run** first — this checks the sheet and settings without calling
-  anyone: `python -m src.dispatcher --dry-run`
-- When the dry run looks clean, place the real calls:
-  `python -m src.dispatcher`
-- To test with just one person: `python -m src.dispatcher --only +14155550123`
+### 6. Run the demo (once Rishi's code is ready)
+Rishi confirms when the webhook + agent are implemented. Then:
+- Rishi starts the agent worker and the webhook + ngrok tunnel.
+- You (or anyone) **call the Twilio trial number** from a phone.
+- The agent answers, runs the interview, and every turn is logged.
 
 ---
 
 ## Product-side things worth owning
-Beyond the setup mechanics, these are natural fits for the product track:
-- **Question content** — the actual questions in `../roles/*.yaml` and the shared
-  `../roles/behavioral.yaml`. Rishi wires them up, but the *wording, tone, and
-  what we're screening for* is a product call. Review and refine these.
-- **Roles for the demo** — we're limiting to two. If a different pair tells a
-  better story, decide that and let Rishi know (he adds a `roles/<id>.yaml`).
-- **Compliance/consent** — calling candidates with an AI may require a spoken
+- **Question content & tone** in `../roles/` (as above).
+- **Roles for the demo** — we're limiting to two; if a different pair demos
+  better, decide and tell Rishi.
+- **Consent/compliance** — an AI answering candidate calls may need a spoken
   disclosure/consent line at the start. Decide the wording; it lives in the
-  greeting. Confirm any legal requirements for the regions we call.
-- **The candidate list** — who we call, and making sure numbers/consent are
-  legitimate.
+  greeting.
+- **When to fund outbound** — decide if/when we pay to enable outbound dialing
+  (Twilio upgrade or LiveKit Phone Numbers), which unlocks `candidates.csv` +
+  the dispatcher.
 
 ---
 
@@ -158,12 +144,11 @@ Beyond the setup mechanics, these are natural fits for the product track:
 | Thing | You touch? | Location |
 | --- | --- | --- |
 | API keys / secrets | Yes | `.env` (from `.env.example`) |
-| Twilio number + SIP trunk | Yes | Twilio console + `../scripts/outbound_trunk.json` |
-| LiveKit outbound trunk id | Yes | created via `lk`, stored in `.env` |
-| Candidate list | Yes | `../candidates.csv` |
+| Twilio trial number + Voice webhook | Yes (with Rishi) | Twilio console |
 | Question wording | Shared | `../roles/*.yaml` |
-| Application code | No (Rishi) | `../src/` |
+| Webhook / agent / interview code | No (Rishi) | `../src/` |
+| Candidate sheet (outbound, later) | Later | `../candidates.csv` |
 
 ## Glossary
-Every technical term here (SIP, trunk, E.164, API key, LiveKit, etc.) is defined
-in plain language in `../GLOSSARY.md`. Keep it open as you go.
+Every technical term here (webhook, Media Streams, TwiML, LiveKit, ngrok, etc.)
+is defined in plain language in `../GLOSSARY.md`.

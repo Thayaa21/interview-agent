@@ -1,6 +1,7 @@
 """Candidate sheet loading.  [SKELETON]
 
-Owner: Rishi (code), with the sheet itself maintained by Baradwaj.
+Owner: Rishi (code), with the sheet itself maintained by Baradhwaj.
+NOTE: candidate sheet is for OUTBOUND (funded-later); not used in the free demo.
 
 The candidate sheet is a CSV with columns: name, role, phone.
 Each row becomes one outbound call.

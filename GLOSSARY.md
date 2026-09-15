@@ -2,21 +2,40 @@
 
 Plain-language definitions of the terms used in this project. Grouped by area.
 
-## Telephony & SIP
+## Inbound (free path — what the demo uses)
+- **Inbound call** — the *candidate* dials our number and the agent answers.
+  This is the free demo path (no paid trunk).
+- **Twilio trial** — a free Twilio account with limited free voice minutes
+  (~75) and a trial number. Enough to demo inbound. Callers hear a short "trial"
+  message. No upgrade/payment required for this path.
+- **Voice webhook** — a URL Twilio calls when a call comes in, asking "what do I
+  do with this call?" We answer with TwiML. This is the free mechanism (the one
+  Baradhwaj used before) and needs **no SIP trunk**.
+- **TwiML** — Twilio's XML instruction format returned by the webhook (e.g.
+  `<Say>`, `<Connect><Stream>`).
+- **Media Streams** — Twilio feature that streams a call's raw audio over a
+  **WebSocket** to a server you choose. Triggered by TwiML `<Connect><Stream>`.
+  This is how we get call audio into our app without a SIP trunk.
+- **Twilio Connector (LiveKit)** — LiveKit's built-in bridge that accepts a
+  Twilio Media Stream and drops the caller into a LiveKit room — no SIP trunk.
+- **ngrok** — a tool that gives your local server a temporary public URL, so
+  Twilio can reach the webhook running on your laptop during the demo. Free.
+
+## Telephony & SIP (outbound — funded-later)
 - **PSTN** — the traditional phone network a normal call travels over.
-- **DID** — a dialable phone number (E.164, e.g. +14155550123). Here it's the
-  Twilio number used as the outbound caller ID.
+- **DID** — a dialable phone number (E.164, e.g. +14155550123).
 - **E.164** — international phone-number format: `+`, country code, number, no
   spaces/dashes. The candidate sheet's phone column must use it.
 - **SIP** — the signaling protocol that sets up/manages/ends calls over IP. It's
   the "call control" layer; it doesn't carry the audio itself.
 - **RTP** — the protocol that actually carries the call audio (SRTP = encrypted).
-- **SIP trunk** — a logical connection over SIP between two phone systems. Here
-  it links Twilio (the phone number) to LiveKit (the agent).
+- **SIP trunk** — a logical connection over SIP between two phone systems. This
+  is Twilio's **paid** "Elastic SIP Trunk" product — the one that forces a trial
+  upgrade, which is why the demo avoids it and uses the Voice webhook instead.
 - **Outbound trunk** — a trunk used to place calls *out* (us calling the
-  candidate). This project is outbound.
-- **Termination URI** — the Twilio SIP address that outbound calls are sent to
-  when leaving LiveKit toward the PSTN.
+  candidate). Funded-later phase.
+- **Termination URI** — the Twilio SIP address outbound calls are sent to when
+  leaving LiveKit toward the PSTN.
 - **Caller ID** — the number shown to the person you call (`OUTBOUND_CALLER_ID`).
 
 ## LiveKit
@@ -78,5 +97,5 @@ Plain-language definitions of the terms used in this project. Grouped by area.
   `.env.example`.
 - **Skeleton** — structure and stubs only (signatures + `TODO` markers), no
   implemented logic yet.
-- **`TODO(Rishi)` / `TODO(Baradwaj)`** — markers assigning each unimplemented
+- **`TODO(Rishi)` / `TODO(Baradhwaj)`** — markers assigning each unimplemented
   piece to a work track (code vs. setup).

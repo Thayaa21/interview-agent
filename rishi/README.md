@@ -6,14 +6,24 @@ a signature, a docstring describing what it should do, and a
 `raise NotImplementedError("TODO(Rishi): ...")` placeholder. Your job is to
 replace each placeholder with a working implementation.
 
-Baradhwaj (product) handles all the accounts, API keys, phone/SIP trunk setup,
-and the candidate sheet — see `../baradhwaj/`. You can build and unit-test almost
-everything before his setup is done by using fakes and dry runs.
+Baradhwaj (product) handles all the accounts, API keys, the Twilio trial number,
+and the interview content — see `../baradhwaj/`. You can build and unit-test
+almost everything before his setup is done by using fakes.
 
 ---
 
-## Demo scope
-- **Outbound** calling only (we call the candidate, not the other way around).
+## Demo scope — FREE, INBOUND first
+
+We are doing **inbound** for the demo: the **candidate calls a Twilio trial
+number** and the agent answers. This is free because it uses Twilio's **Voice
+webhook + Media Streams** (`<Connect><Stream>`) bridged into LiveKit via the
+**Twilio Connector** — **no Elastic SIP Trunk** (the SIP trunk is the paid
+product that forces a trial upgrade, so we avoid it).
+
+**Outbound is deferred to a "funded later" phase.** The `src/dispatcher.py`
+outbound engine and `candidates.csv` stay in the repo but are NOT needed for the
+demo — implement them only when we fund outbound dialing.
+
 - **2 roles only**: `staff_pharmacist` and `oncology_rn` (files in `roles/`).
 - Company context: Soliant (healthcare/education staffing).
 
@@ -63,39 +73,57 @@ Each item points to the file and the `TODO(Rishi)` inside it.
    name), plus call metadata (candidate, role, phone). Make it safe to call from
    LiveKit callbacks (thread-safe) and flush on `close()`.
 
-8. **`src/dispatcher.py` — `_place_call`, `run`, `main`**
-   The outbound engine. For each candidate: dispatch the named agent into a new
-   room (carrying candidate context as metadata), then create a SIP participant
-   on the outbound trunk to dial the candidate. Support `--dry-run` (validate
-   sheet + config, place no calls) and `--only <phone>`.
+8. **`src/agent.py` — `entrypoint()` + worker registration**
+   The per-call agent. Load the role, build the `AgentSession` (Deepgram STT,
+   Anthropic LLM, Cartesia TTS, Silero VAD + LiveKit turn detection), greet,
+   then on each final transcript drive the `InterviewController`, speak the
+   result, log turns, and hang up on END. Register the worker with `agent_name`.
+   (For inbound, candidate context can be minimal — no candidate sheet needed.)
 
-9. **`src/agent.py` — `entrypoint()` + worker registration**
-   The per-call agent. Read candidate context from job metadata, load the role,
-   build the `AgentSession` (Deepgram STT, Anthropic LLM, Cartesia TTS, Silero
-   VAD + LiveKit turn detection), greet, then on each final transcript drive the
-   `InterviewController`, speak the result, log turns, and hang up on END.
-   Register the worker with `agent_name` matching the dispatch config.
+9. **Inbound webhook bridge (the free path) — NEW, replaces the trunk**
+   Add a small webhook service (e.g. `src/inbound_webhook.py`, FastAPI/Flask)
+   that Twilio calls when a candidate dials in. It returns **TwiML** with
+   `<Connect><Stream>` pointing at the **LiveKit Twilio Connector** so the
+   caller's audio is bridged into a LiveKit room where the agent is waiting.
+   - Reference: LiveKit "Twilio Connector" (Media Streams) — bridges a Twilio
+     call into a room **without** a SIP trunk.
+   - Run it locally behind an **ngrok** tunnel; give Baradhwaj the public URL to
+     paste into the number's Voice webhook.
 
 10. **`roles/` — finalize question wording** for the two demo roles.
+
+### Deferred (funded-later, outbound)
+- **`src/dispatcher.py` — `_place_call`, `run`, `main`.** The outbound engine
+  (agent dispatch + create SIP participant on an outbound trunk) and
+  `candidates.csv`. Implement only when outbound is funded. Leave the stubs.
 
 ---
 
 ## Verify the LiveKit API names
-`src/agent.py` and `src/dispatcher.py` are written against LiveKit Agents /
-`livekit-api` 1.x. After `pip install -r requirements.txt`, confirm the exact
-class/event/method names against the installed version (the file headers list
-what to check) and adjust if the SDK changed.
+`src/agent.py` (and, later, `src/dispatcher.py`) are written against LiveKit
+Agents / `livekit-api` 1.x. After `pip install -r requirements.txt`, confirm the
+exact class/event/method names against the installed version (the file headers
+list what to check). Also check the current **Twilio Connector / Media Streams**
+setup in the LiveKit telephony docs for the inbound bridge in step 9.
 
 ## How to work without waiting on Baradhwaj
 - Steps 1–7 need no live accounts. Write small fakes (e.g. a fake reasoner) and
-  test `InterviewController`, `load_candidates`, `questionbank`, and the
-  transcript loggers locally.
-- Use `python -m src.dispatcher --dry-run` to validate the sheet + roles once
-  `config`, `candidates`, and `questionbank` are done.
-- Live calls (steps 8–9 end to end) need Baradhwaj's `.env` + SIP trunk.
+  test `InterviewController`, `questionbank`, and the transcript loggers locally.
+- The compliance/analysis/dashboard layer (`../layer/`) already runs end-to-end
+  against mock transcripts (`python -m layer.smoke_test`) — useful for exercising
+  guardrails + criteria mapping without any phone setup.
+- Live inbound (steps 8–9) needs Baradhwaj's `.env` + Twilio trial number + the
+  webhook URL wired to the number.
 
-## Done when
-- `python -m src.dispatcher --dry-run` validates cleanly.
-- Worker + dispatcher together place a real call, ask role + behavioral
-  questions with follow-ups capped at 2, and hang up after the last question.
+## Done when (inbound demo)
+- The agent worker + inbound webhook are running (webhook exposed via ngrok).
+- Calling the Twilio trial number connects to the agent, which asks the role +
+  behavioral questions with follow-ups capped at 2 and hangs up after the last.
 - Every turn is written to the transcript store.
+
+## Note on the there being two "layers"
+- `src/` = the interview agent (your track).
+- `../layer/` = compliance guardrails + answer→JD-criteria analysis + live
+  dashboard (already implemented). When wiring live, feed real STT fragments to
+  the layer's turn-assembler and route agent output through its guardrails —
+  seams are documented in `../layer/README.md`.

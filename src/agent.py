@@ -1,6 +1,6 @@
 """LiveKit Agents worker entrypoint (outbound interview).  [SKELETON]
 
-Owner: Rishi (pipeline wiring) + Baradwaj (worker registration / dispatch config).
+Owner: Rishi (pipeline wiring) + Baradhwaj (worker registration / dispatch config).
 
 The dispatcher creates a per-call room, dispatches this named agent into it with
 candidate context (name, role, phone) as job metadata, then dials the candidate.
@@ -18,8 +18,8 @@ Intended usage once implemented:
 TODO(Rishi): build the AgentSession (Deepgram STT, Anthropic LLM, Cartesia TTS,
              Silero VAD + LiveKit turn detection), read job metadata, drive the
              InterviewController on each final transcript, log turns, hang up on END.
-TODO(Baradwaj): make sure the worker's agent_name matches the dispatch config
-                and the trunk setup (see scripts/ + setup guide).
+TODO(Baradhwaj): make sure the worker's agent_name matches the dispatch config
+                 and the setup (see scripts/setup.md).
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ async def entrypoint(ctx) -> None:  # ctx: livekit.agents.JobContext
 
 
 if __name__ == "__main__":
-    # TODO(Rishi/Baradwaj): register the worker with LiveKit, e.g.
+    # TODO(Rishi/Baradhwaj): register the worker with LiveKit, e.g.
     #   from livekit import agents
     #   from livekit.agents import WorkerOptions
     #   settings = load_settings(profile="none")
