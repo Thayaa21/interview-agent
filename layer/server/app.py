@@ -7,6 +7,9 @@ Endpoints:
   GET  /api/sessions/{id}              -> session info
   GET  /api/sessions/{id}/events       -> all events for a session (replay)
   POST /api/mock/start                 -> start a scripted mock call
+  GET  /api/roles                      -> roles available for a live call
+  POST /api/call/start                 -> begin an interactive browser call
+  POST /api/call/answer                -> submit one candidate answer
   WS   /ws                             -> live event stream (all sessions)
 
 Run:
@@ -21,6 +24,7 @@ from typing import Optional
 from ..analysis.criteria import load_criteria
 from ..compliance.rules import load_rulebook
 from ..types import new_id
+from .live_session import MANAGER
 from .mock_driver import run_mock_call
 from .store import STORE
 
@@ -48,6 +52,16 @@ class MockStartRequest(BaseModel):
     candidate: str = "Alex Taylor"
     role: str = "oncology_rn"
     speed: float = 4.0
+
+
+class CallStartRequest(BaseModel):
+    candidate: str = "Candidate"
+    role: str = "oncology_rn"
+
+
+class CallAnswerRequest(BaseModel):
+    session_id: str
+    text: str
 
 
 @app.get("/api/health")
@@ -100,6 +114,39 @@ async def mock_start(req: MockStartRequest):
     # Fire and forget; events stream over the WebSocket.
     asyncio.create_task(run_mock_call(req.candidate, req.role, session_id, speed=req.speed))
     return {"session_id": session_id}
+
+
+# --- Live browser call ("Call me") -----------------------------------------
+@app.get("/api/roles")
+async def roles():
+    """Roles available for a live call (for the dashboard dropdown)."""
+    return MANAGER.roles()
+
+
+@app.post("/api/call/start")
+async def call_start(req: CallStartRequest):
+    """Begin an interactive interview. Returns the agent's opening line
+    (greeting + first question). Events also stream over the WebSocket."""
+    session_id = new_id("live_")
+    try:
+        session = MANAGER.create(session_id, req.candidate, req.role)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    agent_line = session.start()
+    return {"session_id": session_id, "agent": agent_line, "finished": session.finished}
+
+
+@app.post("/api/call/answer")
+async def call_answer(req: CallAnswerRequest):
+    """Submit one candidate answer (transcribed in the browser). Returns the
+    agent's next spoken line."""
+    session = MANAGER.get(req.session_id)
+    if session is None:
+        return {"error": "unknown session_id"}
+    if session.finished:
+        return {"agent": "", "finished": True}
+    agent_line = session.answer(req.text)
+    return {"agent": agent_line, "finished": session.finished}
 
 
 @app.websocket("/ws")

@@ -24,6 +24,30 @@ export async function getRulebook() {
   return r.json();
 }
 
+export async function getRoles() {
+  const r = await fetch("/api/roles");
+  return r.json();
+}
+
+// Live browser call ("Call me").
+export async function startCall(candidate, role) {
+  const r = await fetch("/api/call/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ candidate, role }),
+  });
+  return r.json();
+}
+
+export async function sendAnswer(sessionId, text) {
+  const r = await fetch("/api/call/answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, text }),
+  });
+  return r.json();
+}
+
 // Open a WebSocket to the live event stream. onEvent(event) per message.
 export function openEventStream(onEvent) {
   const proto = location.protocol === "https:" ? "wss" : "ws";

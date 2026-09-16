@@ -4,13 +4,14 @@ import Transcript from "./components/Transcript.jsx";
 import CriteriaPanel from "./components/CriteriaPanel.jsx";
 import GuardrailFeed from "./components/GuardrailFeed.jsx";
 import SessionList from "./components/SessionList.jsx";
+import CallPanel from "./components/CallPanel.jsx";
 
 export default function App() {
   const [sessions, setSessions] = useState([]);
   const [activeId, setActiveId] = useState(null);
   // eventsBySession: { [sessionId]: Event[] }
   const [eventsBySession, setEventsBySession] = useState({});
-  const [candidate, setCandidate] = useState("Alex Taylor");
+  const [candidate, setCandidate] = useState("Candidate");
   const [role, setRole] = useState("oncology_rn");
   const wsRef = useRef(null);
 
@@ -78,7 +79,15 @@ export default function App() {
             <option value="oncology_rn">Oncology RN</option>
             <option value="staff_pharmacist">Staff Pharmacist</option>
           </select>
-          <button onClick={onStartMock}>▶ Start mock call</button>
+          <CallPanel
+            candidate={candidate}
+            role={role}
+            onSessionId={(id) => {
+              setActiveId(id);
+              setEventsBySession((prev) => ({ ...prev, [id]: prev[id] || [] }));
+            }}
+          />
+          <button className="mock-btn" onClick={onStartMock}>▶ Mock call</button>
         </div>
       </header>
 
@@ -89,7 +98,7 @@ export default function App() {
 
         <main className="main">
           {!activeId ? (
-            <div className="empty">Start a mock call or select a session.</div>
+            <div className="empty">Click "📞 Call me" to talk to the agent, or "▶ Mock call" to replay a scripted one.</div>
           ) : (
             <>
               <div className="session-head">
