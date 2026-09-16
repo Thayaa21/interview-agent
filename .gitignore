@@ -25,3 +25,6 @@ venv/
 # Frontend (Node)
 node_modules/
 dist/
+
+# Data spreadsheets (may contain candidate data)
+*.xlsx
