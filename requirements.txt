@@ -13,5 +13,12 @@ openai>=1.40.0
 python-dotenv>=1.0.1
 PyYAML>=6.0.2
 
+# --- Inbound Twilio webhook (src/inbound_webhook.py) ---
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.9   # required by FastAPI to parse Twilio's form-encoded POST
+# NOTE: TwiML responses are hand-built (plain XML) instead of pulling in the
+# `twilio` SDK, to avoid its very long install paths breaking on Windows.
+
 # --- Tests ---
 pytest>=8.0.0
