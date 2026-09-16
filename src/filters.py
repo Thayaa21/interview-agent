@@ -23,5 +23,5 @@ class FilterResult:
 
 
 def check_input(text: str, ctx: dict[str, Any] | None = None) -> FilterResult:
-    """Screen a candidate's answer. TODO(Rishi): stub -> allow everything."""
-    raise NotImplementedError("TODO(Rishi): implement check_input (stub: allow all)")
+    """Screen a candidate's answer. Skeleton stub: allow everything."""
+    return FilterResult(allow=True)
