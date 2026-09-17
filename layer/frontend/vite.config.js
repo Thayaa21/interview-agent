@@ -9,6 +9,8 @@ export default defineConfig({
     proxy: {
       "/api": "http://localhost:8000",
       "/ws": { target: "ws://localhost:8000", ws: true },
+      // token server (mints LiveKit join tokens for the real agent)
+      "/token": "http://localhost:8790",
     },
   },
 });

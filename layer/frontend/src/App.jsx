@@ -4,7 +4,7 @@ import Transcript from "./components/Transcript.jsx";
 import CriteriaPanel from "./components/CriteriaPanel.jsx";
 import GuardrailFeed from "./components/GuardrailFeed.jsx";
 import SessionList from "./components/SessionList.jsx";
-import CallPanel from "./components/CallPanel.jsx";
+import LiveCall from "./components/LiveCall.jsx";
 
 export default function App() {
   const [sessions, setSessions] = useState([]);
@@ -51,6 +51,19 @@ export default function App() {
     setEventsBySession((prev) => ({ ...prev, [session_id]: [] }));
   }
 
+  // Events coming from the REAL LiveKit agent (data messages), merged into the
+  // same per-session event list the panels render.
+  function pushLiveEvent(ev) {
+    const sid = ev.session_id;
+    if (!sid) return;
+    ev.id = ev.id || `live_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setEventsBySession((prev) => {
+      const list = prev[sid] ? [...prev[sid], ev] : [ev];
+      return { ...prev, [sid]: list };
+    });
+    setActiveId((cur) => cur || sid);
+  }
+
   const activeEvents = eventsBySession[activeId] || [];
   const active = sessions.find((s) => s.session_id === activeId);
 
@@ -71,7 +84,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="dot" /> Interview Agent · Live Dashboard
+          <span className="dot" /> Soliant Interview Agent · Live
         </div>
         <div className="controls">
           <input value={candidate} onChange={(e) => setCandidate(e.target.value)} />
@@ -79,9 +92,9 @@ export default function App() {
             <option value="oncology_rn">Oncology RN</option>
             <option value="staff_pharmacist">Staff Pharmacist</option>
           </select>
-          <CallPanel
-            candidate={candidate}
+          <LiveCall
             role={role}
+            onEvent={pushLiveEvent}
             onSessionId={(id) => {
               setActiveId(id);
               setEventsBySession((prev) => ({ ...prev, [id]: prev[id] || [] }));
@@ -98,7 +111,7 @@ export default function App() {
 
         <main className="main">
           {!activeId ? (
-            <div className="empty">Click "📞 Call me" to talk to the agent, or "▶ Mock call" to replay a scripted one.</div>
+            <div className="empty">Click "📞 Talk to agent" to start a live voice interview, or "▶ Mock call" to replay a scripted one.</div>
           ) : (
             <>
               <div className="session-head">
