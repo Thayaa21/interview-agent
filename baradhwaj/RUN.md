@@ -29,15 +29,28 @@ npm install
 cd ../..
 ```
 
-## Every time you run it — start 4 things (4 terminals)
+## Every time you run it — EASIEST: one command
+
+From the repo root:
+
+```bash
+./run_demo.sh
+```
+
+This starts all four services (agent worker, token server, dashboard backend,
+frontend). Press Ctrl+C to stop them all. Then open the dashboard (below).
+
+### Or start the 4 things manually (4 terminals)
 
 Each terminal: run `source .venv/bin/activate` first (except the frontend one).
+ALL FOUR must be running — if you skip the token server, clicking "Talk to
+agent" fails with a JSON error.
 
 ```bash
 # Terminal 1 — the voice agent worker
 AGENT_AUTO_DISPATCH=1 python -m src.agent dev
 
-# Terminal 2 — the token server (lets the browser join)
+# Terminal 2 — the token server (lets the browser join)  << REQUIRED
 python -m src.token_server
 
 # Terminal 3 — the dashboard backend
@@ -56,6 +69,10 @@ npm run dev
 4. Follow `baradhwaj/demo_script.txt` to test the flow, scoring, and guardrails.
 
 ## If something's off
+- **"Failed to JSON" / token error when clicking Talk:** the TOKEN SERVER isn't
+  running (or crashed). Make sure Terminal 2 (`python -m src.token_server`) is
+  up on port 8790. If it crashed at startup, your LiveKit keys in `.env` are
+  missing/wrong. Using `./run_demo.sh` avoids forgetting this.
 - **Agent is silent:** make sure CARTESIA_VOICE is blank (a voice ID from
   another account won't exist in yours). Check Terminal 1 for errors.
 - **"missing environment variable" error:** a key is empty in `.env`.

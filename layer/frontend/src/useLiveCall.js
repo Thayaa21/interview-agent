@@ -25,8 +25,21 @@ export function useLiveCall({ onEvent } = {}) {
       setError("");
       setStatus("connecting");
       try {
-        const r = await fetch(`/token?role=${encodeURIComponent(role)}`);
+        let r;
+        try {
+          r = await fetch(`/token?role=${encodeURIComponent(role)}`);
+        } catch (netErr) {
+          throw new Error("Can't reach the token server. Start it: python -m src.token_server (port 8790).");
+        }
+        const ctype = r.headers.get("content-type") || "";
+        if (!r.ok || !ctype.includes("application/json")) {
+          throw new Error(
+            `Token server returned a non-JSON response (status ${r.status}). ` +
+              "Is 'python -m src.token_server' running on port 8790, and are your LiveKit keys set in .env?"
+          );
+        }
         const { url, token, room: roomName } = await r.json();
+        if (!url || !token) throw new Error("Token server response missing url/token — check LiveKit keys in .env.");
         setSessionId(roomName);
 
         const room = new Room({ adaptiveStream: true, dynacast: true });
