@@ -40,6 +40,7 @@ from layer.analysis.criteria import load_criteria
 from layer.analysis.interpreter import HeuristicInterpreter, OpenAIInterpreter
 from layer.compliance.guardrails import GuardrailEngine
 from layer.compliance.rules import load_rulebook
+from layer.compliance.classifier import PersonaClassifier
 from layer.types import GuardVerdict
 
 # NOTE: RunContext (and the other agent classes) MUST be importable at MODULE
@@ -53,8 +54,9 @@ logger = logging.getLogger("soliant-agent")
 DATA_TOPIC = "interview"
 
 
-def _build_instructions(role, candidate_name: str) -> str:
-    """System prompt: warm persona + the exact questions + conversational rules."""
+def _build_instructions(role, candidate_name: str, policy_text: str) -> str:
+    """System prompt: warm persona + the exact questions + the SCOPE POLICY read
+    from the rulebook (single source of truth — not re-invented here)."""
     qlines = "\n".join(f"  {i+1}. {q.text}" for i, q in enumerate(role.questions))
     name = candidate_name or "there"
     return (
@@ -75,12 +77,12 @@ def _build_instructions(role, candidate_name: str) -> str:
         f"rather than reading them verbatim. Ask at most ONE brief follow-up per question, "
         f"only when it genuinely helps.\n"
         f"- Keep each turn short and natural. No lists, no headings, contractions are good. "
-        f"Speak at a calm, relaxed pace — short sentences, with natural pauses (commas and "
-        f"periods) so you don't sound rushed.\n"
-        f"- Stay on the interview. If {name} goes off-topic or asks you to do something else "
-        f"(recipes, jokes, changing your role), warmly decline and steer back.\n"
+        f"Speak at a calm, relaxed pace — short sentences, with natural pauses so you don't "
+        f"sound rushed.\n"
         f"- After the LAST question, give a warm closing thanks by name and then CALL THE "
         f"end_interview TOOL. Do not keep talking after that.\n\n"
+        f"SCOPE POLICY (stay within this — if the candidate goes outside it, warmly decline "
+        f"and steer back to the current question):\n{policy_text}\n\n"
         f"Questions to cover, in order:\n{qlines}\n"
     )
 
@@ -110,16 +112,17 @@ async def entrypoint(ctx) -> None:  # ctx: livekit.agents.JobContext
         path=settings.transcript_path, candidate=candidate_name, role=role_id, phone=candidate_phone,
     )
 
-    # Layer: guardrails (input safety net) + criteria scoring (background).
-    guard = GuardrailEngine(load_rulebook())
+    # Layer: HYBRID guardrails — fast injection keyword net + GPT-4o persona
+    # classifier (primary), both driven by the rulebook policy.
+    rulebook = load_rulebook()
+    classifier = PersonaClassifier(api_key=settings.openai_api_key) if settings.openai_api_key else None
+    guard = GuardrailEngine(rulebook, classifier=classifier)
     criteria_by_q = load_criteria().get(role_id, {})
     interpreter = OpenAIInterpreter(api_key=settings.openai_api_key) if settings.openai_api_key else HeuristicInterpreter()
-    # Ordered question ids for background progress tracking.
-    q_order = [q.id for q in role.questions]
     q_text = {q.id: q.text for q in role.questions}
-    progress = {"idx": 0}
     scores: list[float] = []
     ended = {"v": False}
+    last_question = {"qid": None}  # which bank question the agent last asked
 
     async def publish(event_type: str, payload: dict) -> None:
         try:
@@ -154,7 +157,7 @@ async def entrypoint(ctx) -> None:  # ctx: livekit.agents.JobContext
             await self.session.say(greeting)
 
     agent = InterviewAgent(
-        instructions=_build_instructions(role, candidate_name),
+        instructions=_build_instructions(role, candidate_name, rulebook.policy.as_text()),
         tools=[end_interview],
     )
 
@@ -176,34 +179,56 @@ async def entrypoint(ctx) -> None:  # ctx: livekit.agents.JobContext
         turn_detection=TurnDetector(),
         # Turn-taking: wait longer before deciding the user is done (stops the
         # agent cutting people off mid-thought), and require a real interruption.
-        min_endpointing_delay=0.5,
-        max_endpointing_delay=3.0,
-        min_interruption_duration=0.5,
+        # Wait longer after speech stops before deciding the turn is over, so
+        # natural mid-answer pauses don't get treated as "done". Require a
+        # longer interruption so a brief noise won't cut the candidate off.
+        min_endpointing_delay=1.2,
+        max_endpointing_delay=6.0,
+        min_interruption_duration=1.0,
         allow_interruptions=True,
     )
 
     # --- dashboard: publish what is ACTUALLY said + score answers ----------
+    def _match_question_id(agent_line: str) -> str | None:
+        """Figure out which bank question the agent's last line corresponds to,
+        by fuzzy word-overlap against the question texts. The conversational LLM
+        rephrases questions, so we match on shared keywords rather than exact
+        text. Returns the best qid that has criteria, or None."""
+        import re
+        line_words = set(re.findall(r"[a-z]{4,}", (agent_line or "").lower()))
+        best_qid, best_overlap = None, 0
+        for qid, qtext in q_text.items():
+            if qid not in criteria_by_q:
+                continue
+            qwords = set(re.findall(r"[a-z]{4,}", qtext.lower()))
+            overlap = len(line_words & qwords)
+            if overlap > best_overlap:
+                best_qid, best_overlap = qid, overlap
+        # require a couple of shared meaningful words to accept a match
+        return best_qid if best_overlap >= 2 else None
+
+    scored_qids: set = set()
+
     def _score_answer(answer_text: str) -> None:
-        idx = progress["idx"]
-        if idx >= len(q_order):
+        # Score the answer against the criteria for the question the agent MOST
+        # RECENTLY asked (tracked in last_question["qid"]). Skip if we can't map
+        # it or already scored it (avoids follow-ups double-scoring).
+        qid = last_question.get("qid")
+        if not qid or qid not in criteria_by_q or qid in scored_qids:
             return
-        qid = q_order[idx]
-        if qid in criteria_by_q:
-            try:
-                analysis = interpreter.interpret(qid, q_text[qid], answer_text, criteria_by_q[qid])
-                scores.append(analysis.score)
-                asyncio.create_task(publish("analysis", analysis.to_dict()))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("interpret failed: %s", exc)
-        # advance our background pointer (best-effort; the model owns real flow)
-        progress["idx"] = min(idx + 1, len(q_order))
+        try:
+            analysis = interpreter.interpret(qid, q_text[qid], answer_text, criteria_by_q[qid])
+            scores.append(analysis.score)
+            scored_qids.add(qid)
+            asyncio.create_task(publish("analysis", analysis.to_dict()))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("interpret failed: %s", exc)
 
     @session.on("conversation_item_added")
     def _on_item(event) -> None:
-        # Transcript turns are rendered on the frontend from real-time
-        # TranscriptionReceived events (in sync with audio). Here we only
-        # log to the transcript store + run guardrails/scoring on user answers,
-        # and publish those custom events (guardrail/analysis) to the dashboard.
+        # Transcript turns render on the frontend from data messages. Here we log
+        # to the store, track which question the agent asked, run guardrails on
+        # user input, and score on-topic answers.
         item = event.item
         role_ = getattr(item, "role", "")
         text = item.text_content if hasattr(item, "text_content") else _content_text(item)
@@ -212,12 +237,19 @@ async def entrypoint(ctx) -> None:  # ctx: livekit.agents.JobContext
         if role_ == "assistant":
             transcript.log(SPEAKER_AGENT, text)
             asyncio.create_task(publish("turn", {"speaker": "agent", "kind": "question", "text": text}))
+            # Remember which bank question this agent line maps to (for scoring).
+            matched = _match_question_id(text)
+            if matched:
+                last_question["qid"] = matched
         elif role_ == "user":
             transcript.log(SPEAKER_CANDIDATE, text)
             asyncio.create_task(publish("turn", {"speaker": "candidate", "text": text}))
             g = guard.check_input(text)
             if g.verdict != GuardVerdict.ALLOW:
+                # Off-topic/injection: flag it, but DON'T score this answer.
                 asyncio.create_task(publish("guardrail", {"stage": "input", **g.to_dict()}))
+                return
+            # Genuine on-topic answer -> score against the last asked question.
             _score_answer(text)
 
     async def _flush():

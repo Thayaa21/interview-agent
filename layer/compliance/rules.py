@@ -46,15 +46,39 @@ class Messages:
 
 
 @dataclass(frozen=True)
+class Policy:
+    """The single source of truth for scope — read by BOTH the classifier and
+    the agent's instructions."""
+
+    purpose: str = ""
+    allowed: List[str] = field(default_factory=list)
+    not_allowed: List[str] = field(default_factory=list)
+
+    def as_text(self) -> str:
+        """Render the policy as plain text for prompts (classifier + agent)."""
+        allowed = "\n".join(f"  - {a}" for a in self.allowed)
+        not_allowed = "\n".join(f"  - {n}" for n in self.not_allowed)
+        return (
+            f"{self.purpose.strip()}\n\n"
+            f"ALLOWED (on-topic):\n{allowed}\n\n"
+            f"NOT ALLOWED (off-topic or role-change attempts):\n{not_allowed}"
+        )
+
+
+@dataclass(frozen=True)
 class Rulebook:
-    purpose: str
-    allowed_intents: List[str]
+    policy: Policy
     off_topic_signals: List[str]
     injection_signals: List[str]
     allowed_output_kinds: List[str]
     output_limits: OutputLimits
     budgets: Budgets
     messages: Messages
+
+    # Back-compat: some code reads .purpose directly.
+    @property
+    def purpose(self) -> str:
+        return self.policy.purpose
 
 
 def load_rulebook(path: str | None = None) -> Rulebook:
@@ -67,15 +91,19 @@ def load_rulebook(path: str | None = None) -> Rulebook:
         except yaml.YAMLError as exc:
             raise RulebookError(f"Could not parse rulebook {path!r}: {exc}") from exc
 
-    scope = data.get("scope", {}) or {}
+    pol = data.get("policy", {}) or {}
     ol = data.get("output_limits", {}) or {}
     bg = data.get("budgets", {}) or {}
     ms = data.get("messages", {}) or {}
 
     return Rulebook(
-        purpose=(scope.get("purpose") or "").strip(),
-        allowed_intents=list(scope.get("allowed_intents") or []),
-        off_topic_signals=[s.lower() for s in (scope.get("off_topic_signals") or [])],
+        policy=Policy(
+            purpose=(pol.get("purpose") or "").strip(),
+            allowed=list(pol.get("allowed") or []),
+            not_allowed=list(pol.get("not_allowed") or []),
+        ),
+        # off_topic_signals kept for back-compat; the classifier is primary now.
+        off_topic_signals=[s.lower() for s in (data.get("off_topic_signals") or [])],
         injection_signals=[s.lower() for s in (data.get("injection_signals") or [])],
         allowed_output_kinds=list(data.get("allowed_output_kinds") or []),
         output_limits=OutputLimits(
